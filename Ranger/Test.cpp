@@ -1,8 +1,17 @@
 #include "../include/Ranger/Ranger.hpp"
 #include <cstdio>
+#include <cstdint>
+#include <cassert>
 
 int main()
 {
+    {
+        const auto range = Ranger::BitRange<uint8_t>::make("011?'??10");
+        assert(range.isMatches(0b01101010));
+        assert(range.isMatches(0b01110110));
+        assert(range.isMatches(0b00100000, 0b10000000));
+    }
+
     constexpr auto k_testBitCount = 8ull;
     constexpr auto k_max = (1ull << k_testBitCount) - 1;
 

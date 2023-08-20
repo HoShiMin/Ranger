@@ -180,12 +180,12 @@ public:
         return m_baseAndMask;
     }
 
-    constexpr bool isMatches(BaseType value) noexcept
+    constexpr bool isMatches(BaseType value) const noexcept
     {
         return (value & mask()) == baseAndMask();
     }
 
-    constexpr bool isMatches(BaseType begin, BaseType end) noexcept
+    constexpr bool isMatches(BaseType begin, BaseType end) const noexcept
     {
         if (begin == end)
         {
