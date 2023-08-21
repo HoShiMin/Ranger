@@ -98,8 +98,8 @@ This project presents the following algorithm:
    1. Select the highest "any-bit" (marked as "?") and set it to 1 and reset all lower any-bits:
         ```
         1?'?0?? -> 11'0000
-        ^ ^ ^^
-        1 0 00
+         ^ ^ ^^
+         1 0 00
         ```
         We've got the probe value.
    2. We need to understand where the probe value is in relation to the range.  
@@ -108,8 +108,8 @@ This project presents the following algorithm:
         - To the right of the `End`. In this case we can't lower the probe value by the lower "any-bits" as they'realready zeroes. It means that the only case is to reset the highest "any-bit" to zero, set the lower "any-bits" to ones and try again:
             ```
             1?'?0?? -> 10'1011
-            ^ ^ ^^
-            0 1 11
+             ^ ^ ^^
+             0 1 11
             ```
         Repeat comparation with this probe value. If it will be lower than the `Begin` - it is impossible to increaseit more and it means that ranges don't intersect. Otherwise fix the highest "any-bit" as zero and repeat allthese steps for the next "any-bit".
         - Inside the `[Begin..End]` - in this case we can end our search as at least one value from the `[Begin..End]`falls withing the sparsed range.
