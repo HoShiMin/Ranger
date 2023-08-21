@@ -95,14 +95,14 @@ This project presents the following algorithm:
    
    We will use the following strategy:
 
-   **1.** Select the highest "any-bit" (marked as "?") and set it to 1 and reset all lower any-bits:
+   1. Select the highest "any-bit" (marked as "?") and set it to 1 and reset all lower any-bits:
         ```
         1?'?0?? -> 11'0000
          ^ ^ ^^
          1 0 00
         ```
         We've got the probe value.
-   **2.** We need to understand where the probe value is in relation to the range.  
+   2. We need to understand where the probe value is in relation to the range.  
         It can be in three places:  
         - To the left of the `Begin`. In this case we can increase the value more by setting lower "any-bits" to ones.Fix the highest "any-bit" as one and repeat all these steps for the next "any-bit".
         - To the right of the `End`. In this case we can't lower the probe value by the lower "any-bits" as they'realready zeroes. It means that the only case is to reset the highest "any-bit" to zero, set the lower "any-bits" to ones and try again:
