@@ -27,7 +27,7 @@ private:
         }
 
         explicit ChangedBits(unsigned char numberOfChangedBits) noexcept
-            : m_mask((1ull << numberOfChangedBits) - 1)
+            : m_mask((static_cast<BaseType>(1) << numberOfChangedBits) - 1)
             , m_count(numberOfChangedBits)
         {
         }
@@ -94,47 +94,76 @@ private:
     BaseType m_baseAndMask;
 
 public:
+    //
+    // Creates a bit range from a given string.
+    // Example: "11??'001?"
+    // Supported delimiters: " ", "_" and "'".
+    // Drops all bits that are greater than the highest bit of the BaseType.
+    //
     template <size_t size>
     static constexpr BitRange make(const char(&mask)[size]) noexcept
     {
-        constexpr BaseType k_bitSize = sizeof(BaseType) * 8;
+        constexpr BaseType k_bitCount = sizeof(BaseType) * 8;
 
         BitRange bitMask{};
-        BaseType delimCount = 0;
-        for (auto i = 0; i < sizeof(mask); ++i)
+        unsigned char bitNumber = 0;
+        for (auto i = size - sizeof('\0'); i > 0; --i)
         {
-            switch (mask[i])
+            if (bitNumber > (k_bitCount - 1))
+            {
+                break;
+            }
+
+            switch (mask[i - 1])
             {
             case '0':
             {
-                bitMask.m_base &= ~(BaseType(1) << BaseType(k_bitSize - (i - delimCount) - 1));
-                bitMask.m_mask |= BaseType(1) << BaseType(k_bitSize - (i - delimCount) - 1);
+                bitMask.m_base &= ~(BaseType(1) << BaseType(bitNumber));
+                bitMask.m_mask |= BaseType(1) << BaseType(bitNumber);
                 break;
             }
             case '1':
             {
-                bitMask.m_base |= BaseType(1) << BaseType(k_bitSize - (i - delimCount) - 1);
-                bitMask.m_mask |= BaseType(1) << BaseType(k_bitSize - (i - delimCount) - 1);
+                bitMask.m_base |= BaseType(1) << BaseType(bitNumber);
+                bitMask.m_mask |= BaseType(1) << BaseType(bitNumber);
                 break;
             }
             case '?':
             {
-                bitMask.m_base &= ~(BaseType(1) << BaseType(k_bitSize - (i - delimCount) - 1));
-                bitMask.m_mask &= ~(BaseType(1) << BaseType(k_bitSize - (i - delimCount) - 1));
+                bitMask.m_base &= ~(BaseType(1) << BaseType(bitNumber));
+                bitMask.m_mask &= ~(BaseType(1) << BaseType(bitNumber));
                 break;
             }
             case '\'':
             case ' ':
             case '_':
             {
-                ++delimCount;
-                break;
+                continue;
             }
             }
+
+            ++bitNumber;
         }
 
         bitMask.m_baseAndMask = bitMask.m_base & bitMask.m_mask;
         return bitMask;
+    }
+
+    //
+    // Performs converting to a human-readable format ("0?11??00" without delimiters).
+    //
+    template <size_t size = sizeof(BaseType) * 8 + sizeof('\0')>
+    void format(char(&str)[size]) const noexcept
+    {
+        static_assert(size >= (sizeof(BaseType) * 8 + sizeof('\0')), "The given buffer is too small to format this bitrange.");
+
+        unsigned char pos = 0;
+        for (BaseType bit = static_cast<BaseType>(1) << ((sizeof(BaseType) * 8) - 1); bit != 0; bit >>= 1)
+        {
+            str[pos] = (mask() & bit) ? ((base() & bit) ? '1' : '0') : '?';
+            ++pos;
+        }
+        str[sizeof(BaseType) * 8] = '\0';
     }
 
     constexpr BitRange() noexcept
@@ -180,16 +209,37 @@ public:
         return m_baseAndMask;
     }
 
-    constexpr bool isMatches(BaseType value) const noexcept
+    //
+    // Checks whether the value intersects with this range.
+    // 
+    // Examples:
+    // ??01'10?0 Range
+    // 0101'1010 Matches
+    // 1001'1000 Matches
+    // 1010'1000 Doesn't match
+    //
+    constexpr bool intersects(BaseType value) const noexcept
     {
         return (value & mask()) == baseAndMask();
     }
 
-    constexpr bool isMatches(BaseType begin, BaseType end) const noexcept
+    //
+    // Checks whether at least one value from the [begin..end] intersects with this range.
+    // 
+    // Example:
+    // 1?01'1??? Range
+    // 1000'0010 Begin
+    // 1111'0000 End
+    // Matches as there are many values in the [begin..end] that are matches the given range.
+    // For example, these values:
+    // 1001'1000..1001'1111
+    // 1101'1000..1101'1111
+    //
+    constexpr bool intersects(BaseType begin, BaseType end) const noexcept
     {
         if (begin == end)
         {
-            return isMatches(begin);
+            return intersects(begin);
         }
 
         //
@@ -208,7 +258,7 @@ public:
         // ?10|... Range part with the same length as the constant part
         // 010|... constant part
         //
-        const auto changedBits = findChangedBits(begin, end);
+        const ChangedBits changedBits = findChangedBits(begin, end);
         if (((begin & mask()) >> changedBits.count()) != (baseAndMask() >> changedBits.count()))
         {
             // It's guaranteed that the range doesn't match.
@@ -224,14 +274,14 @@ public:
         //   \    Reduced part
         //   Reset the constant part
         //
-        const auto reducedBegin = begin & changedBits.mask();
-        const auto reducedEnd = end & changedBits.mask();
+        const BaseType reducedBegin = begin & changedBits.mask();
+        const BaseType reducedEnd = end & changedBits.mask();
         const BitRange<BaseType> reducedRange(base() & changedBits.mask(), mask() & changedBits.mask());
 
         //
         // Try to find the value from the range mask that is belongs to [Begin..End].
         //
-        auto anyBitMask = (~reducedRange.mask()) & changedBits.mask(); // Mask representing position of any bits
+        BaseType anyBitMask = (~reducedRange.mask()) & changedBits.mask(); // Mask representing position of any bits
         if (!anyBitMask)
         {
             return isInRange(reducedRange.base(), reducedBegin, reducedEnd);
@@ -241,7 +291,7 @@ public:
         // Enum each "any" bit in the range and choose the exact value for it.
         //
         BaseType probeMask = reducedRange.baseAndMask();
-        for (BaseType probingBit = 1ull << findHighestSettedBit(anyBitMask); anyBitMask != 0; probingBit >>= 1)
+        for (BaseType probingBit = static_cast<BaseType>(1) << findHighestSettedBit(anyBitMask); anyBitMask != 0; probingBit >>= 1)
         {
             if ((anyBitMask & probingBit) == 0)
             {
@@ -249,7 +299,7 @@ public:
                 continue;
             }
 
-            const auto rightProbe = resetByMask(probeMask, anyBitMask) | probingBit;
+            const BaseType rightProbe = resetByMask(probeMask, anyBitMask) | probingBit;
             if (isInRange(rightProbe, reducedBegin, reducedEnd))
             {
                 return true;
@@ -267,7 +317,7 @@ public:
             // Here leftProbe > end, we need to try the left-side probe.
             //
 
-            const auto leftProbe = setByMask(probeMask, anyBitMask) ^ probingBit;
+            const BaseType leftProbe = setByMask(probeMask, anyBitMask) ^ probingBit;
             if (isInRange(leftProbe, reducedBegin, reducedEnd))
             {
                 return true;
