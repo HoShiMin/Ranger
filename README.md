@@ -104,14 +104,14 @@ This project presents the following algorithm:
         We've got the probe value.
    2. We need to understand where the probe value is in relation to the range.  
         It can be in three places:  
-        - To the left of the `Begin`. In this case we can increase the value more by setting lower "any-bits" to ones.Fix the highest "any-bit" as one and repeat all these steps for the next "any-bit".
-        - To the right of the `End`. In this case we can't lower the probe value by the lower "any-bits" as they'realready zeroes. It means that the only case is to reset the highest "any-bit" to zero, set the lower "any-bits" to ones and try again:
+        - To the left of the `Begin`. In this case we can increase the value more by setting lower "any-bits" to ones. Fix the highest "any-bit" as one and repeat all these steps for the next "any-bit".
+        - To the right of the `End`. In this case we can't lower the probe value by the lower "any-bits" as they're already zeroes. It means that the only case is to reset the highest "any-bit" to zero, set the lower "any-bits" to ones and try again:
             ```
             1?'?0?? -> 10'1011
              ^ ^ ^^
              0 1 11
             ```
-            Repeat comparation with this probe value. If it will be lower than the `Begin` - it is impossible to increaseit more and it means that ranges don't intersect. Otherwise fix the highest "any-bit" as zero and repeat allthese steps for the next "any-bit".
+            Repeat comparation with this probe value. If it will be lower than the `Begin` - it is impossible to increase it more and it means that ranges don't intersect. Otherwise fix the highest "any-bit" as zero and repeat allthese steps for the next "any-bit".
         - Inside the `[Begin..End]` - in this case we can end our search as at least one value from the `[Begin..End]`falls withing the sparsed range.
       
 
@@ -129,14 +129,14 @@ int main()
 {
     // Create the sparsed range:
     auto range = Ranger::BitRange<uint8_t>::make("011?'??10");
-    assert(range.isMatches(0b01101010));
-    assert(range.isMatches(0b01110110));
+    assert(range.intersects(0b01101010));
+    assert(range.intersects(0b01110110));
 
     //
     // [0010'0000..1000'0000]
     //    Begin       End
     //
-    assert(range.isMatches(0b00100000, 0b10000000));
+    assert(range.intersects(0b00100000, 0b10000000));
     
     // Set the base and the mask manually:
     range.setBase(0b0110'1000);
